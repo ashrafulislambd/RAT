@@ -1,0 +1,33 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+# Compiled standalone binaries — build with: npm run build
+dist/
+
+# Packaged deploy bundles (zip them locally, don't commit)
+*.zip
+
+# ── Runtime logs ──────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ── pkg cache ─────────────────────────────────────────────────────────────────
+# pkg downloads Node.js base binaries here when building
+.pkg-cache/
+
+# ── Environment / secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── OS junk ───────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Editor ────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.user

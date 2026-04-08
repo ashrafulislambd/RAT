@@ -1,0 +1,14 @@
+{
+  "serverUrl": "ws://localhost:3000",
+  "reconnect": {
+    "initialDelay": 2000,
+    "maxDelay": 60000,
+    "multiplier": 2
+  },
+  "logging": {
+    "dir": "logs",
+    "filename": "service.log",
+    "maxFileSizeBytes": 5242880,
+    "maxFiles": 3
+  }
+}

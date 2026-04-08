@@ -1,0 +1,32 @@
+{
+  "name": "ultrarat-client",
+  "version": "1.0.0",
+  "description": "WebSocket client for UltraRAT remote administration tool",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "service": "node service.js",
+    "build": "npm run build:win && npm run build:linux-x64 && npm run build:linux-arm64",
+    "build:win": "pkg service.js --targets node20-win-x64      --output dist/ultrarat-client-win.exe",
+    "build:linux-x64": "pkg service.js --targets node20-linux-x64    --output dist/ultrarat-client-linux-x64",
+    "build:linux-arm64": "pkg service.js --targets node20-linux-arm64 --output dist/ultrarat-client-linux-arm64"
+  },
+  "pkg": {
+    "assets": [
+      "config.json"
+    ],
+    "compress": "GZip"
+  },
+  "keywords": [
+    "websocket",
+    "remote-administration"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.14.2"
+  }
+}
